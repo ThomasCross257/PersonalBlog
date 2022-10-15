@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <title>Getting stable-diffusion working on AMD on Linux</title>
+</head>
+<header>
+    <h1>Tubes</h1>
+    <a href="index.html"><button>Home</button></a>
+    <a href="tutorials.html"><button>Tutorials</button></a>
+    <a href="https://github.com/ThomasCross257"><button>Github</button></a>
+</header>
+<body>
+    </br>
+    <article>
+        Table of Contents:
+        <ul>
+            <li><a href="#Intro">Introduction</a></li>
+            <li><a href="#Start">Getting Started</a></li>
+            <li><a href="#Kernel">Installing ROCm Kernel</a></li>
+            <li><a href="#Docker">Installing Docker (Optional)</a></li>
+            <li><a href="#InstDock">Installing Stable Diffusion (Docker)</a></li>
+            <li><a href="#InstNorm">Installing Stable Diffusion (Normally)</a></li>
+            <li><a href="#Running">Running Stable Diffusion (Both)</a></li>
+            <li><a href="#End">Final Notes (Important for anyone with less than 10 GB of VRAM)</a></li>
+        </ul>
+    </article>
+    <section>
+    <h1 id="Intro">Introduction:</h1>
+    <p>This guide was written with Arch-Linux based systems in mind. I am using Manjaro 21.3.1 Ruah for this guide.</p>
+    <p>I will primarily be following the guide presented on the stable-diffusion webui page, though with some added tweaks to avoid having to root around for answers like I had to.</p>
+    </section>
+    <section>
+    <h1 id="Start">Getting Started:</h1>
+    <p>You will need the following:</br>
+    <ul>
+        <li>Arch Based distro or Arch Linux itself.</br></li>
+        <li>AMD GPU (I am using an RX 6700 non-xt, but this should work for others.)</br></li>
+        <li>ROCm kernel drivers (This is substantially easier on Arch thanks to the AUR)</br></li>
+        <li>The newest version of stable-diffusion-webui</br></li>
+        <li>Docker (This can also work without it, so I'd suggest trying it without docker first and if it doesn't work, try it with docker.)</br></li>
+    </ul>
+    </p>
+    </section>
+    <section>
+    <h1 id="Kernel">Installing ROCm Kernel</h1>
+    <p>ROCm is the platform you will have to use to pass the PyTorch CUDA check. To install, make sure you've enabled AUR support in your software manager. You can also enable this on the CLI with the command:</br>
+        sudo sed -Ei '/EnableAUR/s/^#//' /etc/pamac.conf</br>
+        You want to install the rocm-opencl-runtime & rtocminfo from the AUR afterwards. </br>
+        You can do this graphically in the included package manager if your arch-based distro supports it or by using the command:</br>
+    </br>
+    <code>
+        sudo pamac search rocm</br>
+        sudo pamac install rocm-opencl-runtime</br>
+        sudo pamac install rocm-info</br>
+    </br>
+    </code>
+        Keep in mind that ROCm officially supported on LTS releases of operating systems, so this can/will be easier on certain systems.</br>
+
+        You will have to compile ROCm for yourself if your system isn't supported.</br>
+    </p> 
+</section>  
+    <h1 id="Docker">Installing Docker (Optional)</h1>
+    <p>
+        Go to your software manager and install the offical repository version, or by using the command</br></br>
+    <code>
+        sudo -S docker</br></br>
+    </code>
+        After installation, you will need to enable docker by typing</br></br>
+        <code>
+        sudo systemctl start docker</br></br>
+    </code>
+        Then, pull the latest version of pytorch</br></br>
+        <code>
+        docker pull rocm/pytorch</br></br>
+    </code>
+        Afterward, use the following commands:</br></br>
+        <code>
+        alias drun='sudo docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add=video --ipc=host --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v $HOME/dockerx:/dockerx'</br></br>
+        drun rocm/pytorch​
+    </code>
+    </br></br>
+        Note that you may have to use a different version of Pytorch if you are using a <a href="https://www.techpowerup.com/gpu-specs/amd-navi-21.g923">Navi 21</a> GPU and based on your operating system.
+        However, you probably won't have to do this, but if you do, please take a look at the <a href="https://hub.docker.com/r/rocm/pytorch/tags">tags</a> section on the dockerfile.
+    </p>
+    </section>
+    <section>
+    <h1 id="InstDock">Installing Stable Diffusion (Docker) </h1>
+    <p>Use the commands</br></br>
+    <code>
+        cd /dockerx</br>
+        git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui</br></br>
+    </code>
+        If that directory doesn't exist, create it with </br></br>
+        <code>
+        mkdir dockerx</br>
+        cd stable-diffusion-webui</br></br>
+    </code>
+        Use python --version to check the version of python you're running. It's best practice to update python inside of the container with the following commands:</br></br>
+        <code>
+        apt install python3.X-full # Confirm every prompt #Use whichever version is suggested</br>
+        update-alternatives --install /usr/local/bin/python python /usr/bin/python3.X 1</br>
+        echo 'PATH=/usr/local/bin:$PATH' >> ~/.bashrc</br></br>
+    </code>
+        Restart the container after the fact. If you're doing this after you've created the virtual environment, remove and then recreate the venv.</br></br>
+        <code>
+        python -m venv venv</br>
+        source venv/bin/activate</br>
+        python -m pip install --upgrade pip wheel</br></br>
+    </code>
+    </p>
+</section>
+<section>
+    <h1 id="InstNorm">Installing Stable Diffusion (Normally)</h1>
+    <p>
+        If you're just installing to a regular folder, create a directory and then use the following commands in the terminal. It's almost exactly the same as installing with docker.
+    </br></br>
+        <code>
+        git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui</br>
+        cd stable-diffusion-webui</br>
+        python -m venv venv</br>
+        source venv/bin/activate</br>
+        python -m pip install --upgrade pip wheel</br>
+        </code>
+    </p>
+</section>
+<section>
+    <h1 id="Running">Running Stable Diffusion (Both)</h1>
+        <p>
+        The main guide for stable diffusion often requires you to run Stable Diffusion with their torch commands. However, there's a good reason why that doesn't work.</br></br>
+
+        If you run it as is, it will return an error about not passing the cuda check. DO NOT use --skip-torch-cuda-test in the args.
+        This will allow the program to run, yes, but it will either cause another error down the road or not use the GPU, which is critical in returning images of good quality at a reasonable amount of time.
+        Therefore, you absolutely have to run some derivative of this:</br></br>
+        <code>
+        COMMAND='pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/rocm5.1.1' HSA_OVERRIDE_GFX_VERSION=10.3.0 REQS_FILE='requirements.txt' python launch.py --precision full --no-half
+        </code>
+        HSA_OVERRIDE_GFX_VERSION essentially tells Pytorch that you should recognize this graphics driver. Note that you may need to use a different version number.
+        Furthermore, the attachments on the end can vary, but --precision full and --no-half are essential in keeping s/it (seconds per iteration) low.</br></br>
+    </p>
+    </section>
+    <section>
+    <h1 id="End">Final Notes:</h1>
+        <p>
+        For GPUs with less than 10GBs of VRAM, you should use --medvram for GPUs with 6-8GBs, and --lowvram for GPUs with less than 6GB. --medvram is always good to use even on higher end GPUs since it can minimize VRAM constraints as well.
+        for 8GBs or lower, you should use --precision half instead.</br></br>
+
+        This will take quite a while as it sets up for the first time, but once it's done, you should have a functioning environment that you can test with appropriate models.</br></br>
+
+        I'd strongly suggest following this guide: <a href="https://rentry.org/sdg_FAQ ">https://rentry.org/sdg_FAQ </a> installing the novelai leak, though you're free to use the same guide to install other models that you might be interested in using.
+</br></br>
+        For each successive run, you'll need to reinitialize the virtual environment and git pull the latest version of the repository. 
+</br></br>
+        Hopefully, that clears anything up for any AMD GPU users. This method works perfectly on my card, as it generates a 512x512 image with about 1.3 seconds per iteration.
+        </p>
+    </section>
+</body>
+</html>
